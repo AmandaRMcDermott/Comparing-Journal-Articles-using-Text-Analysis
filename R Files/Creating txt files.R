@@ -177,3 +177,14 @@ new_df <- df %>%
   select(name, date, text)
 
 write_csv(new_df, "article_texts.csv")
+
+
+######## FINAL CLEANING ###############################
+
+# Create clean version of article_texts - remove numbers at the start of text column
+article_texts <- article_texts %>% 
+  filter(str_detect(article_texts$text, "\"[0-9]+\",\"")) %>% 
+  mutate(text = gsub("\"[0-9]+\",", "", text))
+
+# Write csv for clean one
+write.csv(article_texts, "article_texts.csv")
