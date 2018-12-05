@@ -82,4 +82,136 @@ test <- function(input, output, session){
                   colors = brewer.pal(8, "Dark2"))
   })
 }
+
+
+clean_speeches$context2 <- c("name")
+speech_words <- clean_speeches%>% 
+  unnest_tokens(word, text) %>% 
+  count(country, year, context, word, sort = T) %>% 
+  ungroup() %>% 
+  inner_join(get_sentiments("afinn"), by = c(word = "word"))
+
+
+total_speech_words <- speech_words %>% 
+  group_by(country, year, context) %>% 
+  summarize(total = sum(n))
+
+country_words <- left_join(speech_words, total_speech_words)
+
+clean_speeches %>% 
+  spread(context, key = context1, value = context2)
+
+
+speech_tf <- country_words  %>% 
+  bind_tf_idf(word, country, n) %>% 
+  spread(key = context, value = tf)
+
+speech_tf$SOTU[is.na(speech_tf$SOTU)] <- 0
+speech_tf$UNGD[is.na(speech_tf$UNGD)] <- 0
   
+
+test <- speech_tf %>% 
+  arrange(desc(tf_idf)) %>% 
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
+  group_by(country, year, context) %>% 
+  top_n(-3)
+  #ungroup() %>% 
+  ggplot(test, aes(word, tf_idf, fill = word)) +
+  geom_col(show.legend = F) +
+  labs(x = NULL, y = "tf-idf") +
+  #scale_y_discrete(break = word, by = 5)+
+  facet_wrap(~country, ncol = 2, scales = "free")
+  #coord_flip()
+  
+  
+test <- speech_tf %>% 
+  select(country, year, context, word, n) %>% 
+  group_by(country, year, context, word) %>% 
+  top_n(2)
+  
+  #Clustering
+  t1 <- as.matrix(test)
+  distMatrix <- dist(t1, method = "euclidean")
+
+  groups <- hclust(distMatrix, method = "ward.D")
+plot(groups, cex = 0.9, hang = -1)  
+rect.hclust(groups, k = 10)
+
+
+p1 <- speech_tf %>% 
+  filter(country == "CHN") %>% 
+  ggplot(., aes(y = SOTU, x = UNGD, color = country)) +
+  #geom_text(aes(label = word), size = 3, hjust = -0.15) +
+  geom_point(alpha = 0.5, show.legend = F) +
+  geom_jitter() +
+  facet_grid(context ~ country) +
+  labs(title = 'Year: {frame_time}', x = 'count', y = 'total frequency') +
+  transition_time(year) +
+  ease_aes('linear')
+
+animate(p1)
+
+p2 <- speech_tf %>% 
+  filter(country == "RUS", context == "UNGD") %>% 
+  ggplot(., aes(y = tf, x = n, color = country)) 
+  geom_text(aes(label = word), size = 3, hjust = -0.15) +
+  geom_point(alpha = 0.5, show.legend = F) +
+  geom_jitter() +
+  facet_grid(context ~ country) +
+  labs(title = 'Year: {frame_time}', x = 'count', y = 'total frequency') +
+  transition_time(year) +
+  ease_aes('linear')
+
+animate(p2)
+
+p3 <- speech_tf %>% 
+  filter(country == "USA") %>% 
+  ggplot(., aes(y = tf, x = n, color = country)) +
+  geom_text(aes(label = word), size = 3, hjust = -0.15) +
+  geom_point(alpha = 0.5, show.legend = F) +
+  geom_jitter() +
+  facet_grid(context ~ country) +
+  labs(title = 'Year: {frame_time}', x = 'count', y = 'total frequency') +
+  transition_time(year) +
+  ease_aes('linear')
+
+animate(p3)
+
+p4 <- speech_tf %>% 
+  filter(country == "ZAF") %>% 
+  ggplot(., aes(y = tf, x = n, color = country)) +
+  geom_text(aes(label = word), size = 3, hjust = -0.15) +
+  geom_point(alpha = 0.5, show.legend = F) +
+  geom_jitter() +
+  facet_grid(context ~ country) +
+  labs(title = 'Year: {frame_time}', x = 'count', y = 'total frequency') +
+  transition_time(year) +
+  ease_aes('linear')
+
+animate(p4)
+
+p5 <- speech_tf %>% 
+  filter(country == "PHL") %>% 
+  ggplot(., aes(y = tf, x = n, color = country)) +
+  geom_text(aes(label = word), size = 3, hjust = -0.15) +
+  geom_point(alpha = 0.5, show.legend = F) +
+  geom_jitter() +
+  facet_grid(context ~ country) +
+  labs(title = 'Year: {frame_time}', x = 'count', y = 'total frequency') +
+  transition_time(year) +
+  ease_aes('linear')
+
+animate(p5)
+
+p6 <- speech_tf %>% 
+  filter(country == "GHA") %>% 
+  ggplot(., aes(y = tf, x = n, color = country)) +
+  geom_text(aes(label = word), size = 3, hjust = -0.15) +
+  geom_point(alpha = 0.5, show.legend = F) +
+  geom_jitter() +
+  facet_grid(context ~ country) +
+  labs(title = 'Year: {frame_time}', x = 'count', y = 'total frequency') +
+  transition_time(year) +
+  ease_aes('linear')
+
+animate(p6)
