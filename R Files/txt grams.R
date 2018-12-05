@@ -89,11 +89,49 @@ ggraph(bigram_graph, layout = "fr") +
            year = year(date)) %>%
     group_by(year_week = floor_date(date, "1 week"))
   
-p <- ggplot(word_txt2, aes(y = n, x = year_week, color = score)) + 
+p <- word_txt2 %>% 
+  mutate(proportion = n / sum(n)) %>% 
+  ggplot(., aes(y = n, x = proportion, color = score)) + 
   geom_point(alpha = 0.5, show.legend = F) +
   labs(title = 'Year: {frame_time}', x = 'Time', y = 'Count')+
   transition_time(year_week) +
   ease_aes('linear')
 
 animate(p)
+
+#_____________________________________
+word_txt <- full_txt %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>%
+  count(source, name, date, word, sort = T) %>% 
+  inner_join(get_sentiments("afinn"), by = c(word = "word"))
+
+word_txt2 <- word_txt %>%
+  mutate(week = week(ymd(date)),
+         year = year(date)) %>%
+  group_by(year_week = floor_date(date, "1 week"))
+
+word_txt2 %>% 
+  mutate(proportion = n / sum(n)) %>% 
+  ggplot(., aes(x = proportion, y = source, color = abs(source - proportion))) +
+  geom_point()
+
+
+p2 <- word_txt2 %>%
+  group_by(source, year_week) %>%
+  summarize(score = sum(score))  %>% 
+  ggplot(aes(source, score)) + 
+  geom_boxplot() + 
+  transition_states(
+    gear,
+    transition_length = 2,
+    state_length = 1
+  ) +
+  transition_time(year) +
+  enter_fade() +
+  exit_shrink() +
+  ease_aes('linear')+
+  #labs(title = 'Comparing Sum of Sentiment Score', x = 'Score', y = 'Source')
+animate(p2)
+
 
