@@ -80,11 +80,11 @@ test <- function(input, output, session){
     wordcloud_rep(names(v), v, scale = c(4, 0.5),
                   min.freq = input$freq, max.words = input$max,
                   colors = brewer.pal(8, "Dark2"))
-  })
+  })s
 }
 
 
-clean_speeches$context2 <- c("name")
+
 speech_words <- clean_speeches%>% 
   unnest_tokens(word, text) %>% 
   count(country, year, context, word, sort = T) %>% 
@@ -109,33 +109,7 @@ speech_tf <- country_words  %>%
 speech_tf$SOTU[is.na(speech_tf$SOTU)] <- 0
 speech_tf$UNGD[is.na(speech_tf$UNGD)] <- 0
   
-
-test <- speech_tf %>% 
-  arrange(desc(tf_idf)) %>% 
-  mutate(word = factor(word, levels = rev(unique(word)))) %>% 
-  group_by(country, year, context) %>% 
-  top_n(-3)
-  #ungroup() %>% 
-  ggplot(test, aes(word, tf_idf, fill = word)) +
-  geom_col(show.legend = F) +
-  labs(x = NULL, y = "tf-idf") +
-  #scale_y_discrete(break = word, by = 5)+
-  facet_wrap(~country, ncol = 2, scales = "free")
-  #coord_flip()
-  
-  
-test <- speech_tf %>% 
-  select(country, year, context, word, n) %>% 
-  group_by(country, year, context, word) %>% 
-  top_n(2)
-  
-  #Clustering
-  t1 <- as.matrix(test)
-  distMatrix <- dist(t1, method = "euclidean")
-
-  groups <- hclust(distMatrix, method = "ward.D")
-plot(groups, cex = 0.9, hang = -1)  
-rect.hclust(groups, k = 10)
+temp <- subset(speech_tf, country == "CHN" & year == "2007" & word == "improve")
 
 
 p1 <- speech_tf %>% 
