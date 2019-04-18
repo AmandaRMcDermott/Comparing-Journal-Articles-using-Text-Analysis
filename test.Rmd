@@ -1,0 +1,190 @@
+---
+title: "test"
+author: "Amanda McDermott"
+date: "12/5/2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load the prereq
+packages <- c("XML", "tidyverse", "RCurl", "xtable", "rvest", "stringr", "hms", "lubridate", "tidytext", "qdapTools", "readr", "tokenizers", "gganimate", "readxl")
+
+lapply(packages, library, character.only = T)
+
+```
+First, I had to reorganize the dataframe.
+```{r}
+# Load economic sentiment analysis
+economic_sentiment <- read_excel("~/Downloads/economic sentiment.xlsx")
+
+txt_words <- full_txt %>% 
+  unnest_tokens(word, text) %>% 
+  count(name, date, source, year, word, sort = T)
+
+tot_txt_words <- txt_words %>% 
+  group_by(name, date, year, source) %>% 
+  summarize(total = sum(n))
+
+source_words <- left_join(txt_words, tot_txt_words)
+
+txt_tf <- source_words %>% 
+  bind_tf_idf(word, name, n) %>% 
+  spread(key = source, value = tf)
+
+final_tf1 <- txt_tf %>% 
+  gather(source, tf, APSA:PSQ) %>% 
+  filter(!is.na(tf))
+
+final_tf2 <- subset(final_tf1, source == "APSA")
+final_tf3 <- subset(final_tf1, source == "PSQ")
+
+final_tf4 <- final_tf2 %>% left_join(final_tf3, by = c("date", "year", "word"))
+
+final_tf4 <- subset(final_tf4, !is.na(tf.y))
+
+final_tf5 <- final_tf4 %>% 
+  left_join(economic_sentiment)
+
+final_tf5 <- subset(final_tf5, !is.na(sentiment))
+
+final_tf5$sentiment[is.na(final_tf5$sentiment)] <-  "none"
+```
+
+
+I used sentiment analysis to see the frequency of political topics mentioned. 
+There were four main categories: 
+* Economic: Market, Exchange, Development
+* Security: Missile, Aggression, Weapon
+* Environmental: Earth, Water, Climate
+* Moral: Freedom, Liberty, Community
+
+There are four main takeaways from these histograms. 
+
+First, for security, the median frequencies for APSA and PSQ are roughly equal yet APSA is more rightly skewed than PSQ. This may mean that the APSA mentions security words more often than the PSQ.
+
+Second, for economy, again the medians for the two are roughly similar yet the PSQ has more spread this time than the APSA. From this I may gather that the PSQ mentions economic terms more than the APSA
+```{r Histograms}
+s1 <- final_tf5 %>%
+  filter(sentiment == "security") %>% 
+  ggplot(., aes(x = source.x, y = tf.x)) +geom_boxplot() + xlab("Source") + ylab("Frequency")
+
+s2 <- final_tf5 %>%
+  filter(sentiment == "security") %>% 
+  ggplot(., aes(x = source.y, y = tf.y)) +geom_boxplot() + xlab("Source")
+  
+  grid.arrange(s1, s2, ncol=2)
+
+  s3 <- final_tf5 %>%
+    filter(sentiment == "economic") %>% 
+    ggplot(., aes(x = source.x, y = tf.x)) +geom_boxplot() + xlab("Source") + ylab("Frequency")
+  
+  s4 <- final_tf5 %>%
+    filter(sentiment == "economic") %>% 
+    ggplot(., aes(x = source.y, y = tf.y)) +geom_boxplot() + xlab("Source")
+  
+  grid.arrange(s3, s4, ncol=2)
+  
+  s5 <- final_tf5 %>%
+    filter(sentiment == "moral") %>% 
+    ggplot(., aes(x = source.x, y = tf.x)) +geom_boxplot() + xlab("Source") + ylab("Frequency")
+  
+  s6 <- final_tf5 %>%
+    filter(sentiment == "moral") %>% 
+    ggplot(., aes(x = source.y, y = tf.y)) +geom_boxplot() + xlab("Source")
+  
+  grid.arrange(s5, s6, ncol=2)
+```
+
+
+```{r Arranging Data for gganimate}
+# Unnest by by so that all the articles are separated into words
+# Count instances of unique words appearing
+txt_words <- full_txt %>% 
+  unnest_tokens(word, text) %>% 
+  count(name, date, source, year, word, sort = T)
+
+
+tot_txt_words <- txt_words %>% 
+  group_by(name, date, year, source) %>% 
+  summarize(total = sum(n))
+
+source_words <- left_join(txt_words, tot_txt_words)
+
+txt_tf <- source_words %>% 
+  bind_tf_idf(word, name, n) %>% 
+  spread(key = source, value = tf)
+
+final_tf1 <- txt_tf %>% 
+  gather(source, tf, APSA:PSQ) %>% 
+  filter(!is.na(tf))
+
+final_tf2 <- subset(final_tf1, source == "APSA")
+final_tf3 <- subset(final_tf1, source == "PSQ")
+
+final_tf4 <- final_tf2 %>% left_join(final_tf3, by = c("date", "year", "word"))
+
+final_tf4 <- subset(final_tf4, !is.na(tf.y))
+
+final_tf5 <- final_tf4 %>% 
+  left_join(economic_sentiment)
+
+final_tf5 <- subset(final_tf5, !is.na(sentiment))
+
+final_tf5$sentiment[is.na(final_tf5$sentiment)] <-  "none"
+```
+
+```{r, eval = FALSE}
+write_csv(final_tf5, "final_tf5.csv")
+```
+
+```{r}
+#Create year_week column
+final_tf5 <- final_tf5 %>% 
+mutate(week = week(ymd(date)),
+       year = year(date)) %>%
+  group_by(year_week = floor_date(date, "1 week"))
+```
+
+I then used gganimate to look at the variation in economic_sentiments over time. 
+While I have not conducted tests to prove this visual analysis, it appears 
+there is a shift in term frequency from economic to security sentiments. 
+
+```{r gganimate}
+p1 <- final_tf5 %>% 
+  top_n(10) %>% 
+  ggplot(., aes(y = log(tf.y), x = log(tf.x), color = sentiment)) +
+  geom_text(aes(label = word), size = 3, hjust = -0.15) +
+  geom_point(alpha = 0.5, show.legend = F) +
+  geom_abline(slope = 1, intercept = 0) +
+  geom_jitter() +
+  facet_grid(source.x ~ source.y) +
+  labs(title = 'Year: {frame_time}', x = 'APSA Frequnecy', y = 'PSQ Frequnecy') +
+  transition_time(year_week) +
+  ease_aes('linear')
+
+animate(p1, fps = 2)
+```
+
+Moving forward with this project I would like to scrape more journals to garner more 
+words and more variation in the amount of times certain words appear. I would 
+also like to get more articles from a larger range of dates before 2013 to make 
+larger comparisons over time or at specific time intervals. This would also 
+make the Shiny wordcloud app more robust in representing comparisons between journals
+and over time.
+
+Second, I would also like to compare journal articles to popular news sources 
+like the Washignton Post and New York times to see if there is a vast difference
+in discussed topics given the same period of time.
+
+Third, it would interesting to see if journal articles are becoming more pretentious 
+over time by creating another lexicon that contains jargon and overly lengthy words.
+
+Fourth, I'm curious if there is a way to measure bias within articles and journals.
+This is something I'd like to look in to for next semester.
+
+

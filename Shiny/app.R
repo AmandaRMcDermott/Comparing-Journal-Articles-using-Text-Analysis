@@ -13,8 +13,6 @@ full_txt <- read_csv("https://raw.githubusercontent.com/Glacieus/STAT-612-Final-
 sources <<- list("American Political Science Association" = "APSA", "Political Science Quarterly" = "PSQ")
 sources2 <<- list("Political Science Quarterly" = "PSQ", "American Political Science Association" = "APSA")
 
-#type_speech <<- list("UN General Debates" = "UNGD", "State of the Union" = "SOTU")
-
 minyear <<- 2013:2018
 maxyear <<- 2013:2018
 
@@ -117,16 +115,12 @@ ui <- navbarPage(
   theme = shinytheme("superhero"),
   tabPanel(
     "Wordcloud",
-    plotOutput('plot', width = "auto", height = "auto"),
-    fluidRow(
-      column(
-        4,
+    sidebarPanel(
         selectInput("selection", "Choose a Journal:",
                     choices = sources),
         actionButton("update", "Change"),
         hr(),
-      column(
-        6,
+    
         offset = 1,
         sliderInput("yrs", "Years", 2013, 2018, value = c(2013, 2014)),
         sliderInput(
@@ -134,54 +128,46 @@ ui <- navbarPage(
           "Min Freq:",
           min = 1,
           max = 50,
-          value = 15
-        ),
+          value = 15),
+        
         sliderInput(
           "max",
           "Max Number of Words:",
           min = 1,
           max = 300,
-          value = 100
-        )
+          value = 100)
+      ),
+    mainPanel(
+      plotOutput('plot', width = "auto", height = "auto")
+    )),
+  tabPanel("Comparison Wordclouds",
+    sidebarPanel(
+      selectInput("selection3", "Choose Journal 1",
+                  choices = sources),
+      hr(),
+      selectInput("selection4", "Choose Journal 2",
+                  choices = sources2),
+      hr(),
+      offset = 1,
+      sliderInput("yrs2", "Years", 2013, 2018, value = c(2013, 2014)),
+      sliderInput(
+        "freq2",
+        "Min Freq:",
+        min = 1,
+        max = 50,
+        value = 15
+      ),
+      sliderInput(
+        "max2",
+        "Max Number of Words:",
+        min = 1,
+        max = 300,
+        value = 100
       )
-    )
+    ),
+    mainPanel(
+      plotOutput('plot2', width = "auto", height = "600px"))
   )
-  ),
-  tabPanel(
-    "Comparison Wordclouds",
-    plotOutput('plot2', width = "auto", height = "600px"),
-    fluidRow(
-      column(
-        5,
-        selectInput("selection3", "Choose Journal 1",
-                    choices = sources),
-        hr(),
-        selectInput("selection4", "Choose Journal 2",
-                    choices = sources2),
-        hr(),
-      column(
-        4,
-        offset = 1,
-        sliderInput("yrs2", "Years", 2013, 2018, value = c(2013, 2014)),
-        sliderInput(
-          "freq2",
-          "Min Freq:",
-          min = 1,
-          max = 50,
-          value = 15
-        ),
-        sliderInput(
-          "max2",
-          "Max Number of Words:",
-          min = 1,
-          max = 300,
-          value = 100
-        )
-      )
-      )
-    )
-  )
-)
 )
 
 
@@ -231,7 +217,7 @@ server <- function(input, output, session) {
       scale = c(7, 2),
       min.freq = input$freq,
       max.words = input$max,
-      colors = brewer.pal(8, "Set1")
+      colors = brewer.pal(15, "Set2")
     )
   }, height = 700)
   
