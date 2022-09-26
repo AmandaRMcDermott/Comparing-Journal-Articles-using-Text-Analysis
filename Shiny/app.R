@@ -8,7 +8,7 @@ library(shinythemes)
 library(readr)
 
 # Global
-full_txt <- read_csv("https://raw.githubusercontent.com/Glacieus/STAT-612-Final-Project/master/Data/full_txt.csv")
+full_txt <- read_csv("https://raw.githubusercontent.com/Glacieus/STAT-612-Final-Project/master/Data/shiny_txt.csv")
 
 sources <<- list("American Political Science Association" = "APSA", "Political Science Quarterly" = "PSQ")
 sources2 <<- list("Political Science Quarterly" = "PSQ", "American Political Science Association" = "APSA")
@@ -209,6 +209,8 @@ server <- function(input, output, session) {
   wordcloud_rep <- repeatable(wordcloud)
   wordcloud_comp_rep <- repeatable(comparison.cloud)
   
+  color_palette <- colorRampPalette(brewer.pal(15, "Paired"))(25)
+  
   output$plot <- renderPlot({
     v <- terms()
     wordcloud_rep(
@@ -217,7 +219,7 @@ server <- function(input, output, session) {
       scale = c(7, 2),
       min.freq = input$freq,
       max.words = input$max,
-      colors = brewer.pal(15, "Set2")
+      colors = color_palette
     )
   }, height = 700)
   
@@ -230,7 +232,7 @@ server <- function(input, output, session) {
       min.freq = input$freq2,
       max.words = input$max2,
       #title.size = 1.5,
-      colors = c("#6600CC", "red")
+      colors = c("#ef8a62", "#67a9cf")
     )
   }, height = 525)
 }
